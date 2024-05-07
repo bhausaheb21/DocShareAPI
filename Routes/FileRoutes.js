@@ -20,6 +20,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 fileRouter.use(isAuth)
+fileRouter.get('/getAll', FileController.getAllFiles);
+fileRouter.get('/shared', FileController.getSharedFiles)
 fileRouter.get('/open', FileController.openFolder)
 fileRouter.get('/openmy_drive', FileController.openMainFolder)
 fileRouter.post('/createFolder', FileController.createFolder)

@@ -148,7 +148,7 @@ module.exports = class FileController {
 
             folder.files.push(savedfile._id);
             await folder.save();
-           return res.status(201).json({ message: "Uploaded Successfully", savedfile })
+            return res.status(201).json({ message: "Uploaded Successfully", savedfile })
         }
         catch (err) {
             next(err)
@@ -174,12 +174,9 @@ module.exports = class FileController {
             if (!fs.existsSync(filePath)) {
                 return res.status(404).send('File not found');
             }
-
             const contentType = getContentType(file.name)
             res.setHeader('Content-Type', contentType);
-
             const fileStream = fs.createReadStream(filePath);
-
             fileStream.pipe(res);
         }
         catch (err) {
@@ -209,6 +206,49 @@ module.exports = class FileController {
             return res.status(200).json({ message: "Shared Successdully" })
         } catch (error) {
             next(error);
+        }
+    }
+
+    static async getSharedFiles(req, res, next) {
+        try {
+            const user = await User.findById(req.user.id).populate('sharedFiles');
+            console.log(user.sharedFiles);
+            const sharedFiles = []
+            user.sharedFiles.map((value) => {
+                sharedFiles.push({
+                    name: value.name,
+                    fileId: value._id
+                })
+            })
+            return res.status(200).json({ message: "Fetched Shared Document Successfully", documents: sharedFiles })
+        }
+        catch (err) {
+            next(err)
+        }
+    }
+
+    static async getAllFiles(req, res, next) {
+        try {
+            const userID = req.user.id;
+            const user = await User.findById(userID);
+            if (!user) {
+                const error = new Error("Invalid User");
+                error.status = 401;
+                throw error;
+            }
+            const files = await File.find({ owner: user._id });
+
+            const filelist = [];
+            files.map((value) => {
+                filelist.push({
+                    name: value.name,
+                    fileId: value._id
+                })
+            })
+            return res.status(200).json({ message: "Fetched Successfully", files: filelist });
+
+        } catch (error) {
+            next(error)
         }
     }
 }

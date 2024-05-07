@@ -30,7 +30,7 @@ async function startServer() {
         console.log(err);
         if (!err.status) {
             status = 500;
-            message = "Internal Server Error";
+            message = err.message;
         }
         return res.status(status).json({ message })
 
