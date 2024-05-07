@@ -1,6 +1,8 @@
+const jwt = require("jsonwebtoken");
 const { User, Folder } = require("../Models");
 const { getSalt, encryptPass, getToken } = require("../utils/AuthUtils");
 const { getOtp, sendOTP } = require("../utils/OTPService");
+const crypto = require('crypto')
 
 class AuthController {
     static async signup(req, res, next) {
@@ -138,19 +140,74 @@ class AuthController {
                 error.status = 422;
                 throw error;
             }
-
             const payload = {
                 id: user._id,
                 email: user.email,
-                name: user.firstname,
                 verified: user.verified,
                 name: user.name
             }
             const token = getToken(payload);
-            return res.status(200).json({ message: "Login Successful", token, verified: user.verified })
+            return res.status(200).json({ message: "Login Successful", token, verified: user.verified, name : user.name })
 
         } catch (error) {
             next(error)
+        }
+    }
+
+    static async ResetPassword(req, res, next) {
+        try {
+            const { email } = req.body;
+            const user = await User.findOne({ email: email });
+
+            if (!user) {
+                const error = new Error("Invalid Email");
+                error.status = 404;
+                throw error;
+            }
+            const { otp, otp_expiry } = getOtp()
+            user.otp = otp;
+            user.otp_expiry = otp_expiry;
+            sendOTP(user.otp, email);
+            await user.save();
+
+            const token = jwt.sign({ email }, 'Reset', { expiresIn: '30m' })
+
+            return res.status(200).json({ message: "OTP sent Successfully", token });
+
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    static async Savepassword(req, res, next) {
+        try {
+            const { password, cpassword, otp } = req.body;
+            const email = req.email;
+
+            const user = await User.findOne({ email: email });
+
+            if (cpassword !== password) {
+                const error = new Error("Password and Confirm Passwords are Different");
+                error.status = 422;
+                throw error;
+            }
+            if (otp !== user.otp) {
+                const error = new Error("Invalid OTP");
+                error.status = 422;
+                throw error;
+            }
+            if (Date.now() > user.otp_expiry) {
+                const error = new Error("OTP Expired");
+                error.status = 410;
+                throw error;
+            }
+            const hashedpass = await encryptPass(password, user.salt);
+            user.password = hashedpass;
+            await user.save()
+            return res.status(201).json({ message: "Password Reset Successful" });
+        }
+        catch (err) {
+            next(err)
         }
     }
 }

@@ -206,7 +206,7 @@ module.exports = class FileController {
             })
             await user.save();
             await file.save();
-            return res.status(200).json({ message: "Shared Successdully"})
+            return res.status(200).json({ message: "Shared Successdully" })
         } catch (error) {
             next(error);
         }
