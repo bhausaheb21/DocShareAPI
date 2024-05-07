@@ -24,6 +24,7 @@ const fileSchema = new mongoose.Schema({
         level: {
             type: String,
             enum: ['read', 'edit'], // Specify allowed access levels
+            default :'read',
             required: true
         }
     }],

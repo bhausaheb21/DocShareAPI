@@ -27,7 +27,11 @@ const userSchema = new Schema({
     baseFolder: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Folder'
-    }
+    },
+    sharedFiles: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'File'
+    }]
 
 }, {
     timestamps: true,
