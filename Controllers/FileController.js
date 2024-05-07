@@ -187,10 +187,15 @@ module.exports = class FileController {
     static async Sharefile(req, res, next) {
         try {
             const userId = req.user.id;
-            const user = await User.findById(userId);
             const { email, fileId, level } = req.body;
+            const user = await User.findOne({ email: email });
             const file = await File.findById(fileId);
-            if (file.owner.toString() !== user._id.toString()) {
+            if (!user) {
+                const error = new Error("Invalid User");
+                error.status = 422;
+                throw error;
+            }
+            if (file.owner.toString() !== userId.toString()) {
                 const error = new Error("Unauthorized to Do this");
                 error.status = 401;
                 throw error;
@@ -247,6 +252,27 @@ module.exports = class FileController {
             })
             return res.status(200).json({ message: "Fetched Successfully", files: filelist });
 
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    static async deleteFile(req, res, next) {
+        try {
+            const { fileId, parentFolder } = req.body;
+
+            const file = await File.findById(fileId);
+
+            const folder = await Folder.findById(parentFolder);
+            folder.files = folder.files.filter((value) => {
+                return value._id.toString() !== fileId.toString();
+            })
+
+            await folder.save()
+
+            if (file.owner.toString() !== req.user.id.toString()) {
+
+            }
         } catch (error) {
             next(error)
         }
