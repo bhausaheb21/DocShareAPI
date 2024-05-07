@@ -42,7 +42,8 @@ class AuthController {
             return res.json({
                 message: "SignUp Successful",
                 token,
-                verified: saveuser.verified
+                verified: saveuser.verified,
+                name: user.name
             })
 
         } catch (error) {
@@ -76,12 +77,13 @@ class AuthController {
 
                 user.baseFolder = newFolder;
                 await user.save();
-                
+
                 const token = getToken(payload);
                 return res.status(200).json({
                     message: "Verification Successful",
                     token,
-                    verified: finaluser.verified
+                    verified: finaluser.verified,
+                    name: user.name
                 })
             }
             const error = new Error("Invalid OTP")
@@ -141,7 +143,8 @@ class AuthController {
                 id: user._id,
                 email: user.email,
                 name: user.firstname,
-                verified: user.verified
+                verified: user.verified,
+                name: user.name
             }
             const token = getToken(payload);
             return res.status(200).json({ message: "Login Successful", token, verified: user.verified })
