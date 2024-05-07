@@ -1,4 +1,4 @@
-const { User } = require("../Models");
+const { User, Folder } = require("../Models");
 const { getSalt, encryptPass, getToken } = require("../utils/AuthUtils");
 const { getOtp, sendOTP } = require("../utils/OTPService");
 
@@ -65,6 +65,18 @@ class AuthController {
                     name: finaluser.firstname,
                     verified: finaluser.verified
                 }
+                const newFolder = new Folder({
+                    name: "My Drive",
+                    owner: user._id,
+                    subfolders: [],
+                    files: []
+                })
+
+                await newFolder.save()
+
+                user.baseFolder = newFolder;
+                await user.save();
+                
                 const token = getToken(payload);
                 return res.status(200).json({
                     message: "Verification Successful",

@@ -23,9 +23,28 @@ const userSchema = new Schema({
     },
     otp_expiry: {
         type: Date
+    },
+    baseFolder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Folder'
     }
 
-}, { timestamps: true });
+}, {
+    timestamps: true,
+    toJSON: {
+        transform: (ooj, ret) => {
+            delete ret._id;
+            delete ret.createdAt
+            delete ret.updatedAt
+            delete ret.salt
+            delete ret.otp
+            delete ret.password
+            delete ret.otp_expiry
+            delete ret.resettoken
+            delete ret.token_expiry
+        }
+    }
+});
 
 userSchema.index({ email: 1 }, { unique: true });
 

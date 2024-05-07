@@ -2,7 +2,7 @@ const express = require('express')
 require('dotenv').config()
 const cors = require('cors')
 const { connectDB } = require('./utils/db')
-const { UserRouter } = require('./Routes')
+const { UserRouter, FileRouter } = require('./Routes')
 
 
 async function startServer() {
@@ -20,6 +20,7 @@ async function startServer() {
     })
 
     app.use('/auth', UserRouter)
+    app.use(FileRouter)
 
     await connectDB()
 
