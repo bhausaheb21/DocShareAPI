@@ -28,7 +28,7 @@ module.exports = class FileController {
                     fileId: item._id
                 })
             })
-            return res.status(200).json({ message: "Folder Opened Successfully", subfolders, files })
+            return res.status(200).json({ message: "Folder Opened Successfully", subfolders, files, parentId: folder._id })
         }
         catch (err) {
             next(err)
@@ -60,7 +60,7 @@ module.exports = class FileController {
                     fileId: item._id
                 })
             })
-            return res.status(200).json({ message: "Folder Opened Successfully", subfolders, files })
+            return res.status(200).json({ message: "Folder Opened Successfully", subfolders, files, parentId: folder._id })
         }
         catch (err) {
             next(err);
@@ -88,13 +88,29 @@ module.exports = class FileController {
             });
 
             const createdFolder = await newFolder.save();
-
             folder.subfolders.push(createdFolder._id);
             await folder.save();
             return res.status(200).json({ message: "Folder created Successfully", folder: createdFolder })
         }
         catch (err) {
             next(err);
+        }
+    }
+
+    static async DeleteFolder(req, res, next) {
+        try {
+            const { folderId } = req.body;
+
+            const folder = await Folder.findById(folderId);
+
+            if (req.user.id.toString() !== folder.owner.toString()) {
+                const error = new Error("You are not Allowed")
+                error.status = 401;
+                throw error;
+            }
+        }
+        catch (err) {
+            next(err)
         }
     }
 }
