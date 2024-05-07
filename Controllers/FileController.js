@@ -148,7 +148,7 @@ module.exports = class FileController {
 
             folder.files.push(savedfile._id);
             await folder.save();
-            res.status(201).json({ message: "Uploaded Successfully", savedfile })
+           return res.status(201).json({ message: "Uploaded Successfully", savedfile })
         }
         catch (err) {
             next(err)
