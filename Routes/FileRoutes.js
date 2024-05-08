@@ -30,6 +30,7 @@ fileRouter.post('/createFolder', FileController.createFolder)
 fileRouter.post('/uploadFile', upload.single('file'), FileController.uploadFile);
 fileRouter.get('/loadfile', FileController.loadFile);
 fileRouter.post('/share', FileController.Sharefile);
+fileRouter.delete('/delete', FileController.deleteFile);
 
 
 

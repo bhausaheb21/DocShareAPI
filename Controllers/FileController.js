@@ -1,6 +1,7 @@
 const path = require("path");
 const { Folder, User, File } = require("../Models");
-const fs = require('fs')
+const fs = require('fs');
+const { default: mongoose } = require("mongoose");
 
 
 module.exports = class FileController {
@@ -258,24 +259,48 @@ module.exports = class FileController {
     }
 
     static async deleteFile(req, res, next) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
         try {
+            // Start MongoDB session
+
             const { fileId, parentFolder } = req.body;
+            const userId = req.user.id;
 
-            const file = await File.findById(fileId);
+            const file = await File.findById(fileId).session(session);
 
-            const folder = await Folder.findById(parentFolder);
+            if (!file) {
+                const error = new Error("File not found");
+                error.status = 404;
+                throw error;
+            }
+
+            if (file.owner.toString() !== userId) {
+                const error = new Error("Not authenticated to do it");
+                error.status = 401;
+                throw error;
+            }
+
+            const folder = await Folder.findById(parentFolder).session(session);
             folder.files = folder.files.filter((value) => {
                 return value._id.toString() !== fileId.toString();
-            })
+            });
 
-            await folder.save()
+            await folder.save({ session });
+            const filepath = path.join(path.dirname(process.mainModule.filename), file.path);
+            fs.unlink(filepath, async (err) => {
+                const result = await File.findByIdAndDelete(fileId).session(session);
+                await session.commitTransaction();
+                session.endSession();
+                return res.json({ message: "File Deleted Successfully", result });
+            });
 
-            if (file.owner.toString() !== req.user.id.toString()) {
-
-            }
         } catch (error) {
-            next(error)
+            await session.abortTransaction();
+            session.endSession();
+            next(error);
         }
+
     }
 }
 

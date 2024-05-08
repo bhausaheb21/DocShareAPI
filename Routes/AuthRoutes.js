@@ -3,12 +3,40 @@ const { AuthController } = require('../Controllers');
 const { isAuth } = require('../Middlewares/isAuth');
 const { User } = require('../Models');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
 const userRouter = Router();
- 
-userRouter.post('/', AuthController.login)
-userRouter.post('/signup', AuthController.signup)
-userRouter.post('/reset-password', AuthController.ResetPassword);
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 5,
+    message: 'Too many requests, please try again later',
+    keyGenerator: (req) => {
+        return req.email ? req.email : req.ip;
+    }
+});
+
+const limiter2 = rateLimit({
+    windowMs: 4 * 60 * 1000,
+    max: 5,
+    message: 'Too many requests, please try after 5 minutes',
+    keyGenerator: (req) => {
+        return req.body ? req.body.email : req.ip;
+    }
+});
+
+const limiter3 = rateLimit({
+    windowMs: 4 * 60 * 1000,
+    max: 5,
+    message: 'Too many requests, please try after 5 minutes',
+    keyGenerator: (req) => {
+        return req.user ? req.user.id : req.ip;
+    }
+});
+
+
+userRouter.post('/', limiter2, AuthController.login)
+userRouter.post('/signup', limiter2, AuthController.signup)
+userRouter.post('/reset-password', limiter2, AuthController.ResetPassword);
 
 userRouter.post('/reset_password/verify', (req, res, next) => {
     try {
@@ -25,9 +53,12 @@ userRouter.post('/reset_password/verify', (req, res, next) => {
     catch (err) {
         next(err)
     }
-}, AuthController.Savepassword)
+}, limiter, AuthController.Savepassword)
+
+
+
 userRouter.use(isAuth)
-userRouter.post('/verify', AuthController.verify)
+userRouter.post('/verify',limiter3, AuthController.verify)
 userRouter.get('/user_auth', async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id);
