@@ -101,23 +101,6 @@ module.exports = class FileController {
         }
     }
 
-    // static async DeleteFolder(req, res, next) {
-    //     try {
-    //         const { folderId } = req.body;
-
-    //         const folder = await Folder.findById(folderId);
-
-    //         if (req.user.id.toString() !== folder.owner.toString()) {
-    //             const error = new Error("You are not Allowed")
-    //             error.status = 401;
-    //             throw error;
-    //         }
-    //     }
-    //     catch (err) {
-    //         next(err)
-    //     }
-    // }
-
     static async uploadFile(req, res, next) {
         try {
             const user = req.user;
@@ -202,7 +185,7 @@ module.exports = class FileController {
                 throw error;
             }
 
-            user.sharedFiles.push(file);
+            user.sharedFiles.push({ file, sharedBy: req.user.email });
             file.access.push({
                 user,
                 level
@@ -217,13 +200,15 @@ module.exports = class FileController {
 
     static async getSharedFiles(req, res, next) {
         try {
-            const user = await User.findById(req.user.id).populate('sharedFiles');
+            const user = await User.findById(req.user.id).populate('sharedFiles.file');
             console.log(user.sharedFiles);
             const sharedFiles = []
             user.sharedFiles.map((value) => {
+                console.log(value)
                 sharedFiles.push({
-                    name: value.name,
-                    fileId: value._id
+                    name: value.file.name,
+                    fileId: value.file._id,
+                    sharedBy: value.sharedBy
                 })
             })
             return res.status(200).json({ message: "Fetched Shared Document Successfully", documents: sharedFiles })
@@ -294,7 +279,6 @@ module.exports = class FileController {
                 session.endSession();
                 return res.json({ message: "File Deleted Successfully", result });
             });
-
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
@@ -302,8 +286,29 @@ module.exports = class FileController {
         }
 
     }
-}
 
+    static async deleteFolder(req, res, next) {
+        const { folderId } = req.body;
+        try {
+            const folder = await Folder.findById(folderId);
+            if (!folder) {
+                const error = new Error("Invalid Folder");
+                error.status = 404;
+                throw error;
+            }
+
+            if (folder.owner.toString() !== req.user.id.toString()) {
+                const error = new Error("Not Authorized");
+                error.status = 401;
+                throw error;
+            }
+            const result = await deleteFolderAndChildren(folderId);
+            res.status(200).json({ message: "Folder Deleted Successfully" });
+        } catch (error) {
+            next(error);
+        }
+    }
+}
 
 const getContentType = (fileName) => {
     const ext = path.extname(fileName).toLowerCase();
@@ -325,5 +330,41 @@ const getContentType = (fileName) => {
             return 'text/plain';
         default:
             return 'application/octet-stream';
+    }
+}
+
+
+async function deleteFolderAndChildren(folderId) {
+    try {
+        const folder = await Folder.findById(folderId);
+        if (!folder) {
+            throw new Error("Folder not found");
+        }
+        const { folderIds, fileIds } = await gatherChildIds(folder);
+        await Folder.deleteMany({ _id: { $in: folderIds } });
+        await File.deleteMany({ _id: { $in: fileIds } });
+        await Folder.findByIdAndDelete(folder._id)
+        console.log("Deletion Sucessfull");
+    } catch (error) {
+        throw error;
+    }
+}
+
+async function gatherChildIds(folder) {
+    try {
+        let folderIds = [folder._id];
+        let fileIds = folder.files;
+
+        for (const childFolderId of folder.subfolders) {
+            const childFolder = await Folder.findById(childFolderId);
+            if (childFolder) {
+                const { folderIds: subFolderIds, fileIds: subFileIds } = await gatherChildIds(childFolder);
+                folderIds = folderIds.concat(subFolderIds);
+                fileIds = fileIds.concat(subFileIds);
+            }
+        }
+        return { folderIds, fileIds };
+    } catch (error) {
+        throw error;
     }
 }

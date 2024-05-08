@@ -29,8 +29,13 @@ const userSchema = new Schema({
         ref: 'Folder'
     },
     sharedFiles: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'File'
+        file: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'File'
+        },
+        sharedBy: {
+            type: String
+        }
     }]
 
 }, {
